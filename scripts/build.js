@@ -2,8 +2,6 @@
 var fs = require("fs");
 var path = require('path');
 var child_process = require('child_process');
-var Promise = require("bluebird");
-var _ = require('lodash');
 
 var exec = function (cmd, args) {
   return new Promise(function(resolve, reject) {
@@ -50,32 +48,38 @@ if (POSTINSTALL_BUILD_CWD !== CWD) {
       // Fetch package.json
       var pkgJson = require(path.join(CWD, "package.json"));
       var devDeps = pkgJson.devDependencies;
+      var buildDependencies = {};
+
       // Values listed under `buildDependencies` contain the dependency names
       // that are required for `lib` building.
-      var buildDependencies = _.pick(devDeps, pkgJson.buildDependencies);
+      Object.keys(devDeps).forEach(function (devDependency) {
+        if (pkgJson.buildDependencies.indexOf(devDependency) !== -1) {
+          buildDependencies[devDependency] = devDeps[devDependency];
+        }
+      });
 
       // Proceed only if there is something to install
-      if (!_.isEmpty(buildDependencies)) {
+      if (Object.keys(buildDependencies).length) {
         var opts = { env: process.env, stdio: 'inherit' };
+        var installArgs = [];
 
-        console.log('Building Bookshelf.js')
+        console.log('Building Bookshelf.js');
 
         // Map all key (dependency) value (semver) pairs to
         // "dependency@semver dependency@semver ..." string that can be used
         // for `npm install` command
-        var installArgs = _(buildDependencies).pickBy(function (semver, dep) {
-          // Check if the dependency is already installed
-          try { require(dep); return false; }
-          catch (err) { return true; }
-        }).map(function (semver, dep) {
-          // Format installable dependencies
-          return dep + '@' + semver;
-        }).value().join(' ');
+        Object.keys(buildDependencies).forEach(function (buildDependency) {
+          try {
+             require(buildDependency);
+          } catch (err) {
+            installArgs.push(buildDependency + '@' + buildDependencies[buildDependency]);
+          }
+        });
 
         Promise.try(function() {
-            if (!_.isEmpty(installArgs)) {
-              console.log('Installing dependencies');
-              return exec("npm install " + installArgs, opts);
+            if (installArgs.length) {
+              console.log('Installing dependencies', installArgs);
+              return exec("npm install " + installArgs.join(' '), opts);
             }
           }).then(function(stdout, stderr) {
             console.log('✓')
