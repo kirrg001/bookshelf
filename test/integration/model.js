@@ -522,13 +522,15 @@ module.exports = function(bookshelf) {
             equal(model.get('x'), 'y');
             model.unset('x');
             m.off();
-            ok();
           });
 
           m.save(null, {method: 'insert'})
             .then(function () {
               return m.destroy();
-            });
+            })
+            .then(function () {
+              ok();
+            })
       });
 
       it('updates an existing object', function() {

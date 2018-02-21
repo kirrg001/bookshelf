@@ -223,6 +223,13 @@ module.exports = function(Bookshelf) {
             .then(checkTest(this));
         });
 
+        it('eager loads "belongsToMany" models correctly and parent is not undefined', function() {
+          return Post.where('blog_id', 1).fetchAll({withRelated: ['tags']})
+            .then(function (result) {
+              result.models[0].related('tags').relatedData.parentId.should.eql(1);
+            });
+        });
+
       });
 
       describe('Nested Eager Loading - Models', function() {
