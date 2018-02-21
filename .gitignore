@@ -10,3 +10,5 @@ build/
 index.html
 docs/
 .jsdoc-temp/
+.idea/*
+*.iml
